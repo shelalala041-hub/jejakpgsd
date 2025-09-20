@@ -1,0 +1,323 @@
+import React, { useState } from "react";
+
+// JejakPGSD - Single-file prototype React component
+// TailwindCSS utility classes assumed available in the project.
+// To preview locally:
+// 1. Create a React app (Vite or CRA). 2. Install & configure Tailwind. 3. Replace src/App.jsx with this file and run dev.
+
+export default function JejakPGSDApp() {
+  const [schools, setSchools] = useState(sampleSchools);
+  const [query, setQuery] = useState("");
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [showNewVisitForm, setShowNewVisitForm] = useState(false);
+
+  const filtered = schools.filter((s) =>
+    s.name.toLowerCase().includes(query.toLowerCase()) ||
+    s.city.toLowerCase().includes(query.toLowerCase())
+  );
+
+  function addVisit(schoolId, newVisit) {
+    setSchools((prev) =>
+      prev.map((sch) => (sch.id === schoolId ? { ...sch, visits: [newVisit, ...sch.visits] } : sch))
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+      <header className="bg-white shadow sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">JejakPGSD.id — Prototype</h1>
+          <div className="text-sm text-gray-600">Platform transparansi kunjungan mahasiswa PGSD</div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column: Controls + Map (placeholder) */}
+        <section className="lg:col-span-2">
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cari nama sekolah atau kota..."
+                className="flex-1 border px-3 py-2 rounded-lg focus:outline-none focus:ring"
+              />
+              <button
+                onClick={() => {
+                  setShowNewVisitForm(true);
+                  setSelectedSchool(null);
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                Catat Kunjungan
+              </button>
+            </div>
+
+            <div className="h-64 rounded-lg border-dashed border-2 border-gray-200 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="text-lg font-medium">Peta Sekolah (Placeholder)</div>
+                <div className="mt-2 text-sm">Di versi final: peta interaktif menampilkan titik SD dan status kunjungan.</div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filtered.map((s) => (
+                <SchoolCard
+                  key={s.id}
+                  school={s}
+                  onOpen={() => setSelectedSchool(s)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Right column: Selected school / public feed */}
+        <aside className="space-y-4">
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h3 className="font-semibold mb-2">Feed Publik</h3>
+            <div className="text-sm text-gray-600">Update kunjungan terbaru (publik):</div>
+            <ul className="mt-3 space-y-3">
+              {recentVisits(schools).map((v, i) => (
+                <li key={i} className="border rounded-lg p-3">
+                  <div className="text-sm font-medium">{v.title}</div>
+                  <div className="text-xs text-gray-500">{v.schoolName} • {v.date}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h3 className="font-semibold mb-2">Tentang JejakPGSD</h3>
+            <p className="text-sm text-gray-600">Platform ini mencatat kunjungan mahasiswa PGSD ke SD — transparan bagi sekolah, orang tua, dan publik.</p>
+          </div>
+        </aside>
+      </main>
+
+      {selectedSchool && (
+        <SchoolModal
+          school={selectedSchool}
+          onClose={() => setSelectedSchool(null)}
+          onAddVisit={(visit) => addVisit(selectedSchool.id, visit)}
+        />
+      )}
+
+      {showNewVisitForm && (
+        <NewVisitModal
+          schools={schools}
+          onClose={() => setShowNewVisitForm(false)}
+          onSubmit={(schoolId, visit) => {
+            addVisit(schoolId, visit);
+            setShowNewVisitForm(false);
+          }}
+        />
+      )}
+
+      <footer className="max-w-6xl mx-auto p-4 text-center text-sm text-gray-500">Prototype — JejakPGSD.id</footer>
+    </div>
+  );
+}
+
+function SchoolCard({ school, onOpen }) {
+  const visiting = school.visits.some((v) => v.status === "ongoing");
+  const lastVisit = school.visits[0];
+  return (
+    <div className="border rounded-2xl p-4 bg-white">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="font-medium">{school.name}</div>
+          <div className="text-xs text-gray-500">{school.city} • Kelas: {school.level}</div>
+          <div className="mt-2 text-sm text-gray-600">{school.desc}</div>
+        </div>
+        <div className="text-right">
+          {visiting ? (
+            <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Sedang Dikunjungi</div>
+          ) : (
+            <div className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Tidak ada kunjungan</div>
+          )}
+          <div className="mt-2">
+            <button onClick={onOpen} className="mt-2 text-sm text-blue-600">Lihat</button>
+          </div>
+        </div>
+      </div>
+      {lastVisit && (
+        <div className="mt-3 text-xs text-gray-500">Kunjungan terakhir: {lastVisit.date} — {lastVisit.title}</div>
+      )}
+    </div>
+  );
+}
+
+function SchoolModal({ school, onClose, onAddVisit }) {
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-30">
+      <div className="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-lg">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">{school.name}</h2>
+            <div className="text-sm text-gray-500">{school.city} • {school.level}</div>
+          </div>
+          <div>
+            <button onClick={onClose} className="text-gray-600">Tutup</button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h3 className="font-medium text-sm">Informasi Sekolah</h3>
+            <p className="text-sm text-gray-600 mt-2">{school.desc}</p>
+            <div className="mt-3">
+              <h4 className="text-xs font-semibold">Alamat</h4>
+              <div className="text-sm text-gray-600">{school.address}</div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-medium text-sm">Timeline Kunjungan</h3>
+            <div className="mt-2 space-y-3 max-h-48 overflow-auto">
+              {school.visits.map((v, i) => (
+                <div key={i} className="border rounded-lg p-3">
+                  <div className="text-sm font-medium">{v.title}</div>
+                  <div className="text-xs text-gray-500">{v.date} • {v.university}</div>
+                  <div className="text-xs text-gray-600 mt-1">{v.note}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3">
+              <AddVisitSmall onAdd={(visit) => onAddVisit(visit)} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddVisitSmall({ onAdd }) {
+  // small quick-add to mark a school as "visited" from modal
+  const [title, setTitle] = useState("");
+  const [uni, setUni] = useState("");
+  function submit() {
+    if (!title || !uni) return alert("Isi judul dan universitas");
+    const visit = {
+      title,
+      university: uni,
+      date: new Date().toLocaleDateString(),
+      status: "completed",
+      note: "Catatan singkat...",
+    };
+    onAdd(visit);
+    setTitle("");
+    setUni("");
+  }
+  return (
+    <div className="mt-2">
+      <div className="text-xs text-gray-500">Tambah catatan kunjungan (cepat)</div>
+      <div className="flex gap-2 mt-2">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul kunjungan" className="flex-1 border px-2 py-1 rounded" />
+        <input value={uni} onChange={(e) => setUni(e.target.value)} placeholder="Universitas" className="w-36 border px-2 py-1 rounded" />
+        <button onClick={submit} className="bg-blue-600 text-white px-3 rounded">Tambah</button>
+      </div>
+    </div>
+  );
+}
+
+function NewVisitModal({ schools, onClose, onSubmit }) {
+  const [schoolId, setSchoolId] = useState(schools[0]?.id || "");
+  const [title, setTitle] = useState("");
+  const [uni, setUni] = useState("");
+  const [note, setNote] = useState("");
+  const [status, setStatus] = useState("ongoing");
+
+  function submit() {
+    if (!schoolId || !title || !uni) return alert("Isi semua kolom utama");
+    const visit = {
+      title,
+      university: uni,
+      date: new Date().toLocaleDateString(),
+      status,
+      note,
+    };
+    onSubmit(schoolId, visit);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-40">
+      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-lg">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Catat Kunjungan Mahasiswa</h3>
+          <button onClick={onClose} className="text-gray-600">Batal</button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <select value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className="w-full border p-2 rounded">
+            {schools.map((s) => <option key={s.id} value={s.id}>{s.name} — {s.city}</option>)}
+          </select>
+
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul kegiatan (mis. Observasi Kelas II)" className="w-full border p-2 rounded" />
+          <input value={uni} onChange={(e) => setUni(e.target.value)} placeholder="Universitas / Program Studi" className="w-full border p-2 rounded" />
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan singkat" className="w-full border p-2 rounded" rows={3} />
+
+          <div className="flex items-center gap-3">
+            <label className="text-sm">Status:</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="border p-2 rounded">
+              <option value="ongoing">Sedang Dikunjungi</option>
+              <option value="completed">Selesai</option>
+            </select>
+            <div className="flex-1" />
+            <button onClick={submit} className="bg-green-600 text-white px-4 py-2 rounded">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// small helper to compile recent visits across all schools
+function recentVisits(schools) {
+  const list = [];
+  schools.forEach((s) => {
+    s.visits.forEach((v) => {
+      list.push({ ...v, schoolName: s.name });
+    });
+  });
+  list.sort((a, b) => (new Date(b.rawDate || Date.now()) - new Date(a.rawDate || Date.now())));
+  return list.slice(0, 6).map((v) => ({ title: v.title, schoolName: v.schoolName, date: v.date }));
+}
+
+// ---------- Sample data for prototype ----------
+const sampleSchools = [
+  {
+    id: "sd-001",
+    name: "SD Negeri 1 Cendekia",
+    city: "Bandung",
+    level: "K-6",
+    desc: "SD Negeri di pusat kota, aktif berkolaborasi dengan kampus.",
+    address: "Jalan Merdeka No. 12, Bandung",
+    visits: [
+      { title: "Microteaching Kelas II", university: "Universitas Pendidikan Indonesia", date: "2025-09-15", status: "completed", note: "Praktik microteaching 30 menit", rawDate: "2025-09-15" },
+      { title: "Observasi Kurikulum", university: "Universitas X", date: "2025-08-20", status: "completed", note: "Observasi proses pembelajaran", rawDate: "2025-08-20" },
+    ],
+  },
+  {
+    id: "sd-002",
+    name: "SD Harapan Bangsa",
+    city: "Yogyakarta",
+    level: "K-6",
+    desc: "Sekolah swasta dengan pendekatan outdoor learning.",
+    address: "Jl. Malioboro 45, Yogyakarta",
+    visits: [
+      { title: "PPL Semester Gasal", university: "Universitas Negeri Yogyakarta", date: "2025-09-20", status: "ongoing", note: "Mahasiswa melaksanakan PPL di kelas 4", rawDate: "2025-09-20" },
+    ],
+  },
+  {
+    id: "sd-003",
+    name: "SD Alam Insan Muda",
+    city: "Jakarta",
+    level: "K-6",
+    desc: "Fokus pada pendidikan karakter dan lingkungan.",
+    address: "Jl. Sudirman 88, Jakarta",
+    visits: [],
+  },
+];
+
