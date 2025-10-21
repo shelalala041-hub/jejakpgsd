@@ -1,5 +1,5 @@
 # jejakpgsd
-web ini akan membantu mahasiswa pgsd tahu SD/MI mana yang sedang dikunjungi
+web ini akan membantu mahasiswa pgsd mencari informasi mengenai
 <!DOCTYPE html>
 <html lang="id">
 <head>
